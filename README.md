@@ -8,7 +8,7 @@ Download the file locally to run it. Must set up necessary Gmail structure and i
 
 ## Usage
 
-![Screenshot](output.png)
+[![Screenshot](output.png)](https://github.com/Hesselt17/climate-email-parser/blob/main/Output.png)
 
 ## Contributing
 
