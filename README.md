@@ -1,6 +1,6 @@
 # Climate Email Parser
 
-climate-email-parser is a python service written to parse the climate companies contained within Nick Van Osdol's Keep Cool climate tech newsletter.
+climate-email-parser is a python service written to easily parse thousands of climate companies contained across Nick Van Osdol's weekly Keep Cool climate tech newsletter.
 
 ## Installation
 
