@@ -16,6 +16,7 @@ Download the file locally to run it. Must set up necessary Gmail structure and i
 
 ## Output
 
+##### 1. Google Sheet containing all the companies, hyperlinks, country, sector, and notes
 <img width="703" alt="Output" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/fa4d713c-99b5-4e8d-9b7b-6ec9757c365b">
 
 ## Contributing
