@@ -4,7 +4,7 @@ climate-email-parser is a python service written to easily parse thousands of cl
 
 ## Installation
 
-Download the file locally to run it. Must set up necessary Gmail structure and input credentials into the python file. 
+Download the file locally to run it. Must set up necessary Gmail structure and input credentials into the python file. <br>
 Use the following instruction set to do so: https://developers.google.com/sheets/api/quickstart/python.
 
 ## Inputs
