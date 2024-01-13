@@ -8,6 +8,7 @@ Download the file locally to run it. Must set up necessary Gmail structure and i
 
 ## Usage
 
+![Screenshot](output.png)
 
 ## Contributing
 
