@@ -10,6 +10,9 @@ Download the file locally to run it. Must set up necessary Gmail structure and i
 
 <img width="238" alt="Screenshot 2024-01-13 at 2 04 05 PM" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/a7dd3efb-e0e3-42f5-8fd1-62e092e825bd">
 
+<img width="632" alt="Screenshot 2024-01-13 at 2 05 43 PM" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/b4bf2419-76ac-49e8-b30e-ff57ab0b50e8">
+
+
 ## Output
 
 <img width="703" alt="Output" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/fa4d713c-99b5-4e8d-9b7b-6ec9757c365b">
