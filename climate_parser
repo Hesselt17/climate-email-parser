@@ -1,0 +1,229 @@
+"""
+Created on 12/20/22
+Last modified on 1/16/23
+
+@author: TommyHessel
+"""
+
+import email
+import imaplib
+import re
+import traceback
+import pygsheets
+import pandas as pd
+
+
+EMAIL = 'INSERT-YOUR-GMAIL'
+PWD = 'GMAIL-PASSWORD' #Password generated for gmail account after provisioning access
+SMTP_SERVER = "imap.gmail.com"
+LABEL = 'ClimateTech' #Category user creates in gmail based on the email set of interest (e.g., author Nick Van Osdol)
+GOOGLE_CREDS = '/Users/NAME/google_creds.json' #Directory path to google credentials JSON file
+GOOGLE_DOC = 'SHEET NAME' #Name of the Google Sheet to write to
+
+#Only outputs when there is a deal heat section to grab from Nick Van Osdol's climate newsletter
+#Written to grab from forwarded emails
+
+def read_email_from_gmail(EMAIL_TO_FETCH):
+    """
+    read_email_from_gmail reads the climate tech newsletters stored in a gmail inbox.
+
+    :param EMAIL_TO_FETCH: int corresponding to the number of the email to fetch
+    :return: string with the full text of a decoded email
+    """ 
+
+    try:
+        mail = imaplib.IMAP4_SSL(SMTP_SERVER)
+        mail.login(EMAIL,PWD)
+        mail.select("\"" + LABEL + "\"") #select my ClimateTech inbox in my Gmail
+
+        data = mail.search(None, 'ALL')
+        mail_ids = data[1] #all the emails in the ClimateTech inbox
+        id_list = mail_ids[0].split() #mail @ 0 -- single email
+
+        data = mail.fetch(str(EMAIL_TO_FETCH), '(RFC822)')
+        for response_part in data:
+            arr = response_part[0]
+            if isinstance(arr, tuple):
+                msg = email.message_from_string(str(arr[1],'utf-8'))
+                subject, encoding = email.header.decode_header(msg['subject'])[0]
+                print (subject[9:])
+                print (msg['Date']) #Date message sent
+                if 'Tommy Hessel' in msg['from'] and msg.is_multipart():
+                    for part in msg.walk():
+                        decoded_msg = str(part.get_payload(decode=True))
+                        if '<html>' in decoded_msg:
+                            return decoded_msg
+                        else:
+                            if part.is_multipart():
+                                for subpart in part.get_payload():
+                                    decoded_submsg = str(subpart.get_payload(decode=True))
+                                    if '<html' in decoded_submsg:
+                                        return decoded_submsg
+
+    except Exception as e:
+        traceback.print_exc()
+
+
+def text_cleaner(dirty_text):
+    """
+    text_cleaner cleans the html returned by the email to isolate the areas of interest.
+
+    :param dirty_text: string of the email
+    :return: string of cleaned HTML text to parse
+    """ 
+
+    dirty_text = dirty_text.replace('<strong>', '')
+    dirty_text = dirty_text.replace('font-family:&quot;Helvetica&quot;,sans-serif;color:#5B14D8">', '') #font-family:&quot;Helvetica&quot;,sans-serif;color:#5B14D8
+    dirty_text = dirty_text.replace('</span>', '')
+    dirty_text = dirty_text.replace('</strong>','')
+    dirty_text = dirty_text.replace ('serif">','')
+    dirty_text = dirty_text.replace('</a>', '')
+    dirty_text = dirty_text.replace('\\r','')
+    dirty_text = dirty_text.replace('\\n', '')
+    dirty_text = dirty_text.replace('&amp;', '&')
+    dirty_text = dirty_text.replace(';color:#5B14D8">','')
+    dirty_text = dirty_text.strip()
+    clean_text = re.sub('\\\\x[A-Za-z0-9][A-Za-z0-9]', '', dirty_text)
+    return clean_text
+
+def parse_email_text(email_text):
+    """
+    parse_email_text parses the text and cleans it with text_cleaner to extract the section of the email that lists companies.
+
+    :param email_text: string corresponding to the raw email HTML text
+    :return: list of tuples of the following format (company, company_link, country, sector,notes)
+    """ 
+
+    #Broken into match type 1 and match type 2 based on 2 different ways email lists companies
+
+    if email_text is None:
+        return ''
+
+    PARAGRAPH_SPLIT = '<p '
+
+    COMPANY_REGEX = '<\s*strong[^>]*>([^<]*)<\s*\/\s*strong\s*><\/a>' #email of type ID=8, 12 with newer html
+    #COMPANY_REGEX_2 = 'font-family:&quot;Helvetica&quot;,sans-serif;color:#5B14D8"\>([^)]*)\<\/span><\/strong><\/a>'
+    COMPANY_REGEX_2 = ';color:#5B14D8"\>([^)]*)\<\/span><\/strong><\/a>'
+
+    COMPANY_LINK_SEARCH_START_STR = 'originalsrc="'
+    COMPANY_LINK_SEARCH_START_STR_2 = 'a href="'
+
+    COUNTRY_REGEX = '<strong>\s*\(([^)]*)\)'
+    COUNTRY_REGEX_2 = 'serif">\s*\(([^)]*)\)'
+
+    company_lst = []
+
+    deal_heat_startDex = email_text.find("DEAL HEAT")
+    deal_heat_endDex = email_text.find("ELSEWHERE IN CLIMATE TECH") #Make sure this format doesn't change or else this breaks
+    deal_heat = email_text[deal_heat_startDex:deal_heat_endDex]
+
+    deal_heat_split = deal_heat.split(PARAGRAPH_SPLIT) #splits by each paragraph in email
+
+    for deal in deal_heat_split:
+        company_match = re.search(COMPANY_REGEX, deal)
+        company_match_2 = re.search(COMPANY_REGEX_2, deal)
+        #print(company_match_2)
+
+        country_match = re.search(COUNTRY_REGEX, deal)
+        country_match_2 = re.search(COUNTRY_REGEX_2, deal)
+        #print (country_match_2)
+
+        country = ''
+
+
+        if company_match:                               #Paragraph contains a company and thus a link match type 1
+            company_span = company_match.span()
+            company = deal[company_span[0]:company_span[1]]
+            company = text_cleaner(company)
+
+            company_link_start_dex = deal[:company_span[0]].rfind(COMPANY_LINK_SEARCH_START_STR) + len(COMPANY_LINK_SEARCH_START_STR)
+            #company_link_end_dex = deal[:company_span[0]].rfind(COMPANY_LINK_END_STR)
+            company_link_end_dex = deal[:company_span[0]].find('"',company_link_start_dex) #give me first occurence of " after start of link
+            company_link = deal[company_link_start_dex:company_link_end_dex]
+
+            if country_match:                               #Paragraph contains a country
+                country_span = country_match.span()
+                country = deal[country_span[0]:country_span[1]]
+                country_plus = text_cleaner(country)
+                country = country_plus[1:country_plus.find(',')]
+                sector = country_plus[country_plus.find(',')+2:-1]
+                notes = deal[company_link_end_dex:country_span[0]] #FIX THIS @TOMMY
+
+            company_lst.append((company, company_link, country, sector, notes))
+
+
+        if company_match_2:                             # Paragraph contains a company and thus a link match type 2
+            company_span = company_match_2.span()
+            company = deal[company_span[0]:company_span[1]]
+            company = text_cleaner(company)
+
+            company_link_start_dex = deal[:company_span[0]].rfind(COMPANY_LINK_SEARCH_START_STR_2)+len(COMPANY_LINK_SEARCH_START_STR_2)
+            company_link_end_dex = deal[:company_span[0]].find('"',company_link_start_dex) #give me first occurence of " after start of link
+            company_link = deal[company_link_start_dex:company_link_end_dex]
+
+            if country_match_2:  # Paragraph contains a country
+                country_span = country_match_2.span()
+                country = deal[country_span[0]:country_span[1]]
+                country_plus = text_cleaner(country)
+                country = country_plus[1:country_plus.find(',')]
+                sector = country_plus[country_plus.find(',') + 2:-1]
+                notes = deal[company_link_end_dex:country_span[0]] #FIX THIS @TOMMY
+
+            company_lst.append((company, company_link, country, sector,notes))
+
+    #[print (company_info) for company_info in company_lst]
+
+    return company_lst
+
+
+def parse_email(EMAIL_TO_FETCH):
+
+    """
+    parse_email is a helper/runner function that calls read_email_from_gmail and parse_email_text to prepare the send to Google Sheets.
+
+    :param EMAIL_TO_FETCH: int corresponding to the number of the email to fetch
+    :return: list of tuples of the following format (company, company_link, country, sector,notes)
+    """
+
+    email_text_lst = read_email_from_gmail(EMAIL_TO_FETCH)
+    company_list = parse_email_text(email_text_lst)
+    return company_list
+
+
+def send_to_googleSheets (GOOGLE_CREDS, company_list):
+
+    """
+    send_to_googleSheets formats the list of tuples of the following format (company, company_link, country, sector,notes) to Google Sheets.
+
+    :param GOOGLE_CREDS: JSON fields (client_id, project_id, auth_uri, token_uri,auth_provider_x509_cert_url,client_secret,redirect_uris) corresponding to the user's Google Credentials as specified in a separate JSON file
+    :param company_list: list of tuples of the following format (company, company_link, country, sector,notes)
+    :return: None
+    """
+
+    # authorization
+    gc = pygsheets.authorize(client_secret = GOOGLE_CREDS)
+
+    # Create empty dataframe
+    df = pd.DataFrame()
+
+    # Create a column
+    df = pd.DataFrame(company_list, columns=['Company', 'Link', 'Country', 'Sector','Notes'])
+
+    # open the google spreadsheet
+    sh = gc.open(GOOGLE_DOC)
+
+    # select the first sheet
+    wks = sh[0]
+
+    # update the first sheet with df, starting at cell B2.
+    wks.set_dataframe(df, (1, 1))
+
+
+if __name__ == "__main__":
+    company_lst = []
+    for i in range(1,10):  #Set the loop for the number of emails user desires to be parsed
+        company_lst_email = parse_email(i)
+        company_lst.extend(company_lst_email)
+
+    print (len(company_lst))
+    send_to_googleSheets(GOOGLE_CREDS, company_lst)
