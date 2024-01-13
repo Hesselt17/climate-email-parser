@@ -12,7 +12,7 @@ Download the file locally to run it. Must set up necessary Gmail structure and i
 <img width="238" alt="Screenshot 2024-01-13 at 2 04 05 PM" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/a7dd3efb-e0e3-42f5-8fd1-62e092e825bd">
 
 ##### 2. Deal Heat section from the Keep Cool Newsletter
-<img width="632" alt="Screenshot 2024-01-13 at 2 05 43 PM" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/b4bf2419-76ac-49e8-b30e-ff57ab0b50e8">
+<img width="554" alt="Screenshot 2024-01-13 at 2 18 11 PM" src="https://github.com/Hesselt17/climate-email-parser/assets/41354865/ae9f8efc-b869-4e66-a331-ca5d4d81b3f9">
 
 ## Output
 
